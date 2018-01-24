@@ -1,0 +1,42 @@
+syntax = "proto3";
+import "Bftransaction.proto";
+package bfimports;
+
+// service, encrypt a plain text into a cypertext using saber
+service BFSaberService {
+    // request a service of encryption
+    rpc BFTX_Encode(BFTX_Encode_request) returns (BFTX_transaction) {};
+    // request a service for decryption
+    rpc BFTX_Decode(BFTX_Decode_request) returns (BFTX_transaction) {}
+}
+
+// The BFTX encryption transaction data structure (test version)
+message BFTX_Encode_request{
+    BFTX_transaction bftxtrans = 1;
+    BFTX_encryptionConfig bftxconfig = 2;
+}
+// The BFTX decryption transaction data structure (test version)
+message BFTX_Decode_request{
+    BFTX_transaction bftxtrans = 1;
+    string KeyName = 2;
+}
+
+
+message BFTX_encryptionConfig{
+    string version = 1;
+    string group = 2;
+    repeated string recipients = 3;
+    repeated ENCRYPTIONFIELD encryptionfields = 4;
+    repeated PUBLICKEYS publickeys = 5;
+
+}
+
+message ENCRYPTIONFIELD{
+    string fieldname = 1;
+    repeated string authorizeduser= 2;
+}
+
+message PUBLICKEYS{
+    string userid = 1;
+    string keyfile = 2;
+}
