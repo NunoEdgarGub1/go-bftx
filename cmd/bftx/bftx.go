@@ -268,7 +268,7 @@ func main() {
 		{
 			Name:  "massconstruct",
 			Usage: "test purpose, load transactions that are in a csv file",
-			Action: func(c *cli.Context) error {
+			Action: go func(c *cli.Context) error {
 				return cmdMassConstructBfTx(c)
 			},
 		},
