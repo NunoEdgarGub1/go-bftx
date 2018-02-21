@@ -332,7 +332,7 @@ func getFunctionName(i interface{}) string {
 // simpleLogger writes errors and the function name that generated the error to bftx.log
 func simpleLogger(i interface{}, currentError error) {
 	// If the file doesn't exist, create it, or append to the file
-	f, err := os.OpenFile(os.Getenv("GOPATH")+"/src/github.com/blockfreight/go-bftx/logs/bftx.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(os.Getenv("GOPATH")+"/src/github.com/blockfreight/go-bftx/logs/bftx-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -347,7 +347,7 @@ func simpleLogger(i interface{}, currentError error) {
 // queryLogger writes errors, the function name that generated the error, and the transaction body to bftx.log for cmdQuery only
 func queryLogger(i interface{}, currentError string, id string) {
 	// If the file doesn't exist, create it, or append to the file
-	f, err := os.OpenFile(os.Getenv("GOPATH")+"/src/github.com/blockfreight/go-bftx/logs/bftx.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(os.Getenv("GOPATH")+"/src/github.com/blockfreight/go-bftx/logs/bftx-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -362,7 +362,7 @@ func queryLogger(i interface{}, currentError string, id string) {
 // transLogger writes errors, the function name that generated the error, and the transaction body to bftx.log
 func transLogger(i interface{}, currentError error, id string) {
 	// If the file doesn't exist, create it, or append to the file
-	f, err := os.OpenFile(os.Getenv("GOPATH")+"/src/github.com/blockfreight/go-bftx/logs/bftx.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(os.Getenv("GOPATH")+"/src/github.com/blockfreight/go-bftx/logs/bftx-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
