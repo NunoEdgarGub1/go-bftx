@@ -20,5 +20,6 @@
 
 # Folders
 bft-db/
+bftx.db/
 vendor/
 /LOG
