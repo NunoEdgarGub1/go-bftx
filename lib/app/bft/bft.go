@@ -83,7 +83,7 @@ type BftApplication struct {
 
 // NewBftApplication creates a new application
 func NewBftApplication() *BftApplication {
-	stateTree := iavl.NewVersionedTree(0, dbm.NewDB("tendermint", dbm.LevelDBBackendStr, "./"))
+	stateTree := iavl.NewVersionedTree(0, dbm.NewDB("tendermint", dbm.LevelDBBackendStr, "./db"))
 
 	return &BftApplication{
 		state: stateTree,
