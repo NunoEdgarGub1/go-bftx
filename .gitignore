@@ -19,7 +19,6 @@
 .glide/
 
 # Folders
-bft-db/
-bftx.db/
+db/
 vendor/
 /LOG
