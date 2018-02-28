@@ -338,6 +338,30 @@ func (bftx *BF_TX) BroadcastBFTX(idBftx, origin string) error {
 	return nil
 }
 
+func (bftx *BF_TX) NewValidator(publicKey, power, origin string) error {
+	rpcClient := rpc.NewHTTP(os.Getenv("LOCAL_RPC_CLIENT_ADDRESS"), "/websocket")
+	err := rpcClient.Start()
+	if err != nil {
+		log.Println(err.Error())
+		return handleResponse(origin, err, strconv.Itoa(http.StatusInternalServerError))
+	}
+
+	content := "val:" + publicKey + "/" + power
+
+	var tx tmTypes.Tx
+	tx = []byte(content)
+
+	_, rpcErr := rpcClient.BroadcastTxSync(tx)
+	if rpcErr != nil {
+		fmt.Printf("%+v\n", rpcErr)
+		return handleResponse(origin, err, strconv.Itoa(http.StatusInternalServerError))
+	}
+
+	defer rpcClient.Stop()
+
+	return nil
+}
+
 func (bftx *BF_TX) GetBFTX(idBftx, origin string) error {
 	data, err := leveldb.GetBfTx(idBftx)
 	if err != nil {

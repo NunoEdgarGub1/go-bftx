@@ -46,7 +46,10 @@
 package bft
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	"github.com/blockfreight/go-bftx/lib/app/bf_tx"
 	// =======================
@@ -63,10 +66,15 @@ import (
 
 	"github.com/tendermint/abci/example/code"
 	"github.com/tendermint/abci/types"
+	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/iavl"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	wire "github.com/tendermint/go-wire"
+)
+
+const (
+	ValidatorSetChangePrefix string = "val:"
 )
 
 // BftApplication struct
@@ -75,10 +83,8 @@ type BftApplication struct {
 
 	state *iavl.VersionedTree
 
-	blockHeader *types.Header
-
 	// validator set
-	changes []*types.Validator
+	ValUpdates []*types.Validator
 }
 
 // NewBftApplication creates a new application
@@ -97,6 +103,13 @@ func (app *BftApplication) Info(req types.RequestInfo) (resInfo types.ResponseIn
 
 // DeliverTx delivers transactions.Transactions are either "key=value" or just arbitrary bytes
 func (app *BftApplication) DeliverTx(tx []byte) types.ResponseDeliverTx {
+
+	if isValidatorTx(tx) {
+		// update validators in the merkle tree
+		// and in app.ValUpdates
+		return app.execValidatorTx(tx)
+	}
+
 	var key, value []byte
 	parts := bytes.Split(tx, []byte("="))
 	if len(parts) == 2 {
@@ -172,6 +185,99 @@ func (app *BftApplication) Query(reqQuery types.RequestQuery) (resQuery types.Re
 		}
 		return
 	}
+}
+
+// Save the validators in the merkle tree
+func (app *BftApplication) InitChain(req types.RequestInitChain) types.ResponseInitChain {
+	for _, v := range req.Validators {
+		r := app.updateValidator(v)
+		if r.IsErr() {
+			panic(r)
+		}
+	}
+	return types.ResponseInitChain{}
+}
+
+// Track the block hash and header information
+func (app *BftApplication) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
+	// reset valset changes
+	app.ValUpdates = make([]*types.Validator, 0)
+	return types.ResponseBeginBlock{}
+}
+
+// Update the validator set
+func (app *BftApplication) EndBlock(req types.RequestEndBlock) types.ResponseEndBlock {
+	return types.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
+}
+
+func isValidatorTx(tx []byte) bool {
+	return strings.HasPrefix(string(tx), ValidatorSetChangePrefix)
+}
+
+func (app *BftApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx {
+	tx = tx[len(ValidatorSetChangePrefix):]
+
+	//get the pubkey and power
+	pubKeyAndPower := strings.Split(string(tx), "/")
+	if len(pubKeyAndPower) != 2 {
+		return types.ResponseDeliverTx{
+			Code: code.CodeTypeEncodingError,
+			Log:  fmt.Sprintf("Expected 'pubkey/power'. Got %v", pubKeyAndPower)}
+	}
+	pubkeyS, powerS := pubKeyAndPower[0], pubKeyAndPower[1]
+
+	// decode the pubkey, ensuring its go-crypto encoded
+	pubkey, err := hex.DecodeString(pubkeyS)
+	if err != nil {
+		return types.ResponseDeliverTx{
+			Code: code.CodeTypeEncodingError,
+			Log:  fmt.Sprintf("Pubkey (%s) is invalid hex", pubkeyS)}
+	}
+	_, err = crypto.PubKeyFromBytes(pubkey)
+	if err != nil {
+		return types.ResponseDeliverTx{
+			Code: code.CodeTypeEncodingError,
+			Log:  fmt.Sprintf("Pubkey (%X) is invalid go-crypto encoded", pubkey)}
+	}
+
+	// decode the power
+	power, err := strconv.ParseInt(powerS, 10, 64)
+	if err != nil {
+		return types.ResponseDeliverTx{
+			Code: code.CodeTypeEncodingError,
+			Log:  fmt.Sprintf("Power (%s) is not an int", powerS)}
+	}
+
+	// update
+	return app.updateValidator(&types.Validator{pubkey, power})
+}
+
+// add, update, or remove a validator
+func (app *BftApplication) updateValidator(v *types.Validator) types.ResponseDeliverTx {
+	key := []byte("val:" + string(v.PubKey))
+	if v.Power == 0 {
+		// remove validator
+		if !app.state.Has(key) {
+			return types.ResponseDeliverTx{
+				Code: code.CodeTypeUnauthorized,
+				Log:  fmt.Sprintf("Cannot remove non-existent validator %X", key)}
+		}
+		app.state.Remove(key)
+	} else {
+		// add or update validator
+		value := bytes.NewBuffer(make([]byte, 0))
+		if err := types.WriteMessage(v, value); err != nil {
+			return types.ResponseDeliverTx{
+				Code: code.CodeTypeEncodingError,
+				Log:  fmt.Sprintf("Error encoding validator: %v", err)}
+		}
+		app.state.Set(key, value.Bytes())
+	}
+
+	// we only update the changes array if we successfully updated the tree
+	app.ValUpdates = append(app.ValUpdates, v)
+
+	return types.ResponseDeliverTx{Code: code.CodeTypeOK}
 }
 
 // =================================================

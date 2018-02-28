@@ -266,13 +266,6 @@ func main() {
 			},
 		},
 		{
-			Name:  "exit",
-			Usage: "Leaves the program. (Parameters: none)",
-			Action: func(c *cli.Context) {
-				os.Exit(0)
-			},
-		},
-		{
 			Name:  "saberenc",
 			Usage: "prototype of saber encoding service.",
 			Action: func(c *cli.Context) error {
@@ -284,6 +277,20 @@ func main() {
 			Usage: "prototype of saber decoding service.",
 			Action: func(c *cli.Context) error {
 				return cmdSaberDcp(c)
+			},
+		},
+		{
+			Name:  "validator",
+			Usage: "Add a new validator to the network.",
+			Action: func(c *cli.Context) error {
+				return cmdNewValidator(c)
+			},
+		},
+		{
+			Name:  "exit",
+			Usage: "Leaves the program. (Parameters: none)",
+			Action: func(c *cli.Context) {
+				os.Exit(0)
 			},
 		},
 	}
@@ -363,6 +370,24 @@ func getBlockAppHash() ([]byte, error) {
 	}
 
 	return resInfo.LastBlockAppHash, nil
+}
+
+func cmdNewValidator(c *cli.Context) error {
+	args := c.Args()
+	var bftx bf_tx.BF_TX
+	if len(args) != 2 {
+		return errors.New("Command broadcast takes 2 argument: public key and power")
+	}
+
+	if err := bftx.NewValidator(args[0], args[1], common.ORIGIN_CMD); err != nil {
+		return err
+	}
+
+	printResponse(c, response{
+		Result: "New Validator added successfully.",
+	})
+
+	return nil
 }
 
 func cmdBatch(app *cli.App, c *cli.Context) error {
